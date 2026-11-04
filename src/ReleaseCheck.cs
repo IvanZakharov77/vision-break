@@ -9,7 +9,7 @@ using System.Web.Script.Serialization;
 
 internal static class ReleaseCheck
 {
-    public const string CurrentVersion = "1.0.0";
+    public const string CurrentVersion = "1.1.0";
     public const string ReleasePage = "https://github.com/IvanZakharov77/vision-break/releases/latest";
     private const string ReleaseApi = "https://api.github.com/repos/IvanZakharov77/vision-break/releases/latest";
 

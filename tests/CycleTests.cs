@@ -25,5 +25,6 @@ internal static class CycleTests
         Check(demo.Advance(20500) && !demo.OnBreak, "Demo ends after twenty seconds");
         Console.WriteLine("12 cycle checks passed.");
         ReleaseTests.Run();
+        SceneTests.Run();
     }
 }

@@ -71,13 +71,14 @@ internal sealed class BreakSession : ApplicationContext
 {
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly BreakCycle cycle;
-    private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer { Interval = 100 };
+    private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer { Interval = 50 };
     private readonly bool demo;
     private readonly EventWaitHandle stop;
     private Task<Version> updateCheck;
     private NotifyIcon updateNotice;
     private BreakScreen screen;
     private bool sound = true;
+    private long breakStarted;
 
     public BreakSession(bool demo, EventWaitHandle stop)
     {
@@ -85,7 +86,7 @@ internal sealed class BreakSession : ApplicationContext
         this.stop = stop;
         cycle = new BreakCycle(clock.ElapsedMilliseconds, demo);
         if (demo)
-            ShowBreak();
+            ShowBreak(clock.ElapsedMilliseconds);
         timer.Tick += OnTick;
         timer.Start();
         if (!demo)
@@ -109,7 +110,7 @@ internal sealed class BreakSession : ApplicationContext
             if (cycle.OnBreak)
             {
                 TargetWindows.RequestClose();
-                ShowBreak();
+                ShowBreak(now);
             }
             else
             {
@@ -121,7 +122,7 @@ internal sealed class BreakSession : ApplicationContext
             }
         }
         if (screen != null)
-            screen.ShowSeconds(cycle.RemainingSeconds(clock.ElapsedMilliseconds));
+            screen.ShowFrame(cycle.RemainingSeconds(now), now - breakStarted);
     }
 
     private void ShowUpdateIfAvailable()
@@ -163,10 +164,13 @@ internal sealed class BreakSession : ApplicationContext
         }
     }
 
-    private void ShowBreak()
+    private void ShowBreak(long started)
     {
-        screen = new BreakScreen(sound, demo);
-        screen.ShowSeconds(cycle.RemainingSeconds(clock.ElapsedMilliseconds));
+        breakStarted = started;
+        string settings = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "season.txt");
+        int season = demo ? 0 : SceneMotion.TakeSeason(settings);
+        screen = new BreakScreen(sound, demo, season);
+        screen.ShowFrame(cycle.RemainingSeconds(started), 0);
         screen.Show();
         screen.Activate();
     }

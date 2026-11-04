@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Media;
@@ -12,14 +11,19 @@ internal sealed class BreakScreen : Form
     private readonly MemoryStream tickWave = CreateTick();
     private readonly SoundPlayer player;
     private readonly bool demo;
+    private readonly int season;
+    private readonly bool animate;
+    private long sceneElapsed;
     private const string Instruction = "Подойди к этому окну и посмотри вдаль";
     private Font soundFont;
     private bool allowClose;
     private int seconds = -1;
 
-    public BreakScreen(bool sound, bool demo)
+    public BreakScreen(bool sound, bool demo, int season)
     {
         this.demo = demo;
+        this.season = season;
+        animate = Landscape.MotionEnabled();
         SoundEnabled = sound;
         Text = "Программа для тренировки зрения";
         AccessibleName = Text;
@@ -57,13 +61,26 @@ internal sealed class BreakScreen : Form
 
     public bool SoundEnabled { get; private set; }
 
-    public void ShowSeconds(int remaining)
+    public void ShowFrame(int remaining, long elapsed)
     {
-        if (remaining == seconds) return;
+        sceneElapsed = elapsed;
+        if (remaining == seconds)
+        {
+            if (animate) InvalidateScene();
+            return;
+        }
         bool shouldTick = seconds >= 0 && remaining > 0 && SoundEnabled;
         seconds = remaining;
         Invalidate();
         if (shouldTick) player.Play();
+    }
+
+    private void InvalidateScene()
+    {
+        float s = ScaleFactor;
+        int left = (int)((ClientSize.Width - 1200 * s) / 2 + 634 * s);
+        int top = (int)((ClientSize.Height - 700 * s) / 2 + 87 * s);
+        Invalidate(new Rectangle(left, top, (int)Math.Ceiling(482 * s), (int)Math.Ceiling(494 * s)));
     }
 
     public void Dismiss()
@@ -146,7 +163,8 @@ internal sealed class BreakScreen : Form
         Label(g, "Затем можно вернуться к своим делам", 84, 480, 18, 0xA6BCD2);
         Label(g, "40 МИН РАБОТЫ   /   20 МИН ПЕРЕРЫВА", 84, 609, 15, 0x829AB5);
 
-        DrawView(g);
+        Landscape.Draw(g, sceneElapsed, demo, season, animate);
+        Label(g, "РЕЖИМ 01   /   СМОТРИМ ВДАЛЬ", 637, 609, 15, 0x829AB5);
     }
 
     private static readonly int[] Segments =
@@ -170,51 +188,6 @@ internal sealed class BreakScreen : Form
         }
     }
 
-    private static void DrawView(Graphics g)
-    {
-        Block(g, 634, 87, 481, 493, 0x243B56);
-        Block(g, 647, 100, 455, 467, 0x265480);
-        using (var sky = new LinearGradientBrush(new Rectangle(647, 100, 455, 370),
-                                                  ColorOf(0x276197), ColorOf(0x9FEBD9),
-                                                  LinearGradientMode.Vertical))
-            g.FillRectangle(sky, 647, 100, 455, 370);
-        Block(g, 977, 145, 52, 52, 0xFFE493);
-        Block(g, 678, 172, 94, 17, 0xC5F3E9);
-        Block(g, 699, 157, 53, 17, 0xC5F3E9);
-        Block(g, 845, 220, 76, 13, 0xA0E4E2);
-        Shape(g, 0x497FA1, 647, 368, 647, 320, 728, 254, 796, 318, 862, 247, 956, 333, 1023, 264, 1102, 322, 1102, 420);
-        Shape(g, 0x72AFB8, 701, 276, 728, 254, 754, 279, 730, 271);
-        Shape(g, 0x5D9B83, 647, 353, 733, 333, 808, 370, 879, 344, 984, 367, 1102, 327, 1102, 515, 647, 515);
-        Shape(g, 0x276B64, 647, 414, 741, 376, 853, 418, 960, 377, 1102, 414, 1102, 567, 647, 567);
-        Shape(g, 0x79BB88, 894, 392, 954, 397, 881, 449, 976, 567, 814, 567, 790, 474);
-        Block(g, 866, 100, 10, 467, 0x243B56);
-        Block(g, 647, 325, 455, 10, 0x243B56);
-        Block(g, 632, 554, 487, 26, 0x345372);
-
-        // Original block character standing in front of the window.
-        Block(g, 918, 549, 169, 14, 0x193248);
-        Block(g, 955, 491, 40, 63, 0x233F69);
-        Block(g, 1002, 491, 40, 63, 0x345787);
-        Block(g, 950, 536, 46, 21, 0x14263D);
-        Block(g, 1002, 536, 46, 21, 0x14263D);
-        Block(g, 940, 419, 114, 82, 0x74A83F);
-        Block(g, 940, 419, 100, 70, 0xB9F46F);
-        Block(g, 908, 429, 29, 65, 0x9CD84F);
-        Block(g, 908, 481, 29, 21, 0xE7A85F);
-        Block(g, 1058, 429, 29, 65, 0x8AC24A);
-        Block(g, 1058, 481, 29, 21, 0xE7A85F);
-        Block(g, 954, 343, 90, 75, 0xD98C4A);
-        Block(g, 954, 343, 77, 69, 0xFFC879);
-        Block(g, 949, 337, 97, 20, 0x263657);
-        Block(g, 949, 352, 19, 20, 0x263657);
-        Block(g, 976, 372, 8, 10, 0x263657);
-        Block(g, 1009, 372, 8, 10, 0x263657);
-        Block(g, 990, 392, 17, 5, 0x654139);
-        Block(g, 974, 439, 29, 6, 0x305743);
-        Block(g, 986, 428, 6, 28, 0x305743);
-        Label(g, "РЕЖИМ 01   /   СМОТРИМ ВДАЛЬ", 637, 609, 15, 0x829AB5);
-    }
-
     private static Color ColorOf(int rgb)
     {
         return Color.FromArgb(unchecked((int)0xFF000000) | rgb);
@@ -223,14 +196,6 @@ internal sealed class BreakScreen : Form
     private static void Block(Graphics g, float x, float y, float width, float height, int color)
     {
         using (var brush = new SolidBrush(ColorOf(color))) g.FillRectangle(brush, x, y, width, height);
-    }
-
-    private static void Shape(Graphics g, int color, params int[] coordinates)
-    {
-        var points = new Point[coordinates.Length / 2];
-        for (int i = 0; i < points.Length; i++)
-            points[i] = new Point(coordinates[2 * i], coordinates[2 * i + 1]);
-        using (var brush = new SolidBrush(ColorOf(color))) g.FillPolygon(brush, points);
     }
 
     private static void Label(Graphics g, string text, float x, float y, float size, int color)

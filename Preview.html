@@ -3,7 +3,9 @@
 *{box-sizing:border-box} body{margin:0;background:#080f24;color:#f3f7ff;font-family:system-ui,sans-serif}
 main{min-height:100dvh;display:grid;place-items:center} svg{display:block;width:min(100vw,calc(100dvh * 1200 / 700));height:auto;font-weight:700}
 button{font:inherit;width:100%;height:100%;cursor:pointer;color:#baf66b;background:#182c4c;border:1px solid #345a7c}
-#play{position:fixed;bottom:10px;right:10px;width:auto;height:auto;padding:.55em 1em;border-radius:4px}
+.controls{position:fixed;bottom:10px;right:10px;display:flex;gap:8px;align-items:center;background:#0d1930;padding:6px;border-radius:6px}
+.controls button,.controls select{width:auto;height:auto;padding:.55em 1em;border-radius:4px}
+select{background:#182c4c;color:#f3f7ff;border:1px solid #345a7c;font:inherit}
 </style><main><svg viewBox="0 0 1200 700" aria-label="Подойди к этому окну и посмотри вдаль" role="group">
 <defs><linearGradient id="sky" x2="0%" y2="100%"><stop stop-color="#276197"/><stop offset="1" stop-color="#9febd9"/></linearGradient></defs>
 <rect x="42" y="38" width="1116" height="624" fill="#13223C"/>
@@ -24,44 +26,13 @@ button{font:inherit;width:100%;height:100%;cursor:pointer;color:#baf66b;backgrou
 <rect id="progress" x="84" y="451" width="507" height="12" fill="#baf66b"/>
 <text x="84" y="496.74" font-size="18" fill="#A6BCD2">Затем можно вернуться к своим делам</text>
 <text x="84" y="622.95" font-size="15" fill="#829AB5">40 МИН РАБОТЫ   /   20 МИН ПЕРЕРЫВА</text>
-<rect x="634" y="87" width="481" height="493" fill="#243B56"/>
-<rect x="647" y="100" width="455" height="467" fill="#265480"/>
-<rect x="647" y="100" width="455" height="370" fill="url(#sky)"/>
-<rect x="977" y="145" width="52" height="52" fill="#FFE493"/>
-<rect x="678" y="172" width="94" height="17" fill="#C5F3E9"/>
-<rect x="699" y="157" width="53" height="17" fill="#C5F3E9"/>
-<rect x="845" y="220" width="76" height="13" fill="#A0E4E2"/>
-<polygon fill="#497FA1" points="647,368 647,320 728,254 796,318 862,247 956,333 1023,264 1102,322 1102,420"/>
-<polygon fill="#72AFB8" points="701,276 728,254 754,279 730,271"/>
-<polygon fill="#5D9B83" points="647,353 733,333 808,370 879,344 984,367 1102,327 1102,515 647,515"/>
-<polygon fill="#276B64" points="647,414 741,376 853,418 960,377 1102,414 1102,567 647,567"/>
-<polygon fill="#79BB88" points="894,392 954,397 881,449 976,567 814,567 790,474"/>
-<rect x="866" y="100" width="10" height="467" fill="#243B56"/>
-<rect x="647" y="325" width="455" height="10" fill="#243B56"/>
-<rect x="632" y="554" width="487" height="26" fill="#345372"/>
-<rect x="918" y="549" width="169" height="14" fill="#193248"/>
-<rect x="955" y="491" width="40" height="63" fill="#233F69"/>
-<rect x="1002" y="491" width="40" height="63" fill="#345787"/>
-<rect x="950" y="536" width="46" height="21" fill="#14263D"/>
-<rect x="1002" y="536" width="46" height="21" fill="#14263D"/>
-<rect x="940" y="419" width="114" height="82" fill="#74A83F"/>
-<rect x="940" y="419" width="100" height="70" fill="#B9F46F"/>
-<rect x="908" y="429" width="29" height="65" fill="#9CD84F"/>
-<rect x="908" y="481" width="29" height="21" fill="#E7A85F"/>
-<rect x="1058" y="429" width="29" height="65" fill="#8AC24A"/>
-<rect x="1058" y="481" width="29" height="21" fill="#E7A85F"/>
-<rect x="954" y="343" width="90" height="75" fill="#D98C4A"/>
-<rect x="954" y="343" width="77" height="69" fill="#FFC879"/>
-<rect x="949" y="337" width="97" height="20" fill="#263657"/>
-<rect x="949" y="352" width="19" height="20" fill="#263657"/>
-<rect x="976" y="372" width="8" height="10" fill="#263657"/>
-<rect x="1009" y="372" width="8" height="10" fill="#263657"/>
-<rect x="990" y="392" width="17" height="5" fill="#654139"/>
-<rect x="974" y="439" width="29" height="6" fill="#305743"/>
-<rect x="986" y="428" width="6" height="28" fill="#305743"/>
+<clipPath id="viewClip"><rect x="647" y="100" width="455" height="467"/></clipPath>
+<g id="scene" aria-hidden="true"></g>
 <text x="637" y="622.95" font-size="15" fill="#829AB5">РЕЖИМ 01   /   СМОТРИМ ВДАЛЬ</text>
 <foreignObject x="83" y="527" width="234" height="48"><button id="sound" style="font-size:19px" aria-pressed="true">Тиканье · вкл.</button></foreignObject>
-</svg><button id="play">Запустить пример на 20 секунд</button></main>
+</svg><div class="controls"><label for="season">Сезон</label><select id="season">
+<option value="0">Весна</option><option value="1">Лето</option><option value="2">Осень</option><option value="3">Зима</option>
+</select><button id="play">Запустить пример на 20 секунд</button></div></main>
 <script>
 const masks=[63,6,91,79,102,109,125,7,127,111];
 const bars=[[16,0,69,16],[85,16,16,48],[85,80,16,48],[16,128,69,16],[0,80,16,48],[0,16,16,48],[16,64,69,16]];
@@ -69,7 +40,106 @@ const digits=[...document.querySelectorAll('.digit')];
 const progress=document.querySelector('#progress');
 const sound=document.querySelector('#sound');
 const play=document.querySelector('#play');
-let audio, enabled=true, timer;
+const seasonPicker=document.querySelector('#season');
+const scene=document.querySelector('#scene');
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let audio, enabled=true, timer, elapsed=0;
+
+const sky=[0x276197,0x267ec0,0x534281,0x102043];
+const horizon=[0xf9cea0,0xacebd9,0xf6a172,0x465887];
+const light=[0xffd7a4,0xffffff,0xffbda2,0x6481b6];
+const meadow=[0x5d9b83,0x5ea65e,0xb68349,0xb6d5e0];
+const near=[0x277464,0x29764e,0x8d5034,0x79a6b6];
+const path=[0xb6c88b,0xa6c87f,0xdbaa69,0xd9e9ee];
+const leaves=[0x8ccc80,0x69b75b,0xf4a33a,0x8b604e];
+function sceneLighting(ms, animate) {
+  const phase=Math.min(3,Math.floor(ms/5000));
+  if(phase===3 || !animate) return phase;
+  const mix=Math.max(0,(ms%5000/5000-.8)*5);
+  return phase+mix*mix*(3-2*mix);
+}
+function walking(ms) {
+  const passage=ms%16000/8000;
+  return {position:passage<=1?passage:2-passage, direction:passage<1?1:-1,
+          stride:Math.sin(2*Math.PI*ms/1100)};
+}
+function channels(rgb) { return [rgb>>16,(rgb>>8)&255,rgb&255]; }
+function css(parts) { return 'rgb('+parts.map(Math.floor).join(',')+')'; }
+function palette(colors, phase) {
+  const index=Math.floor(phase), blend=phase-index;
+  const next=channels(colors[Math.min(3,index+1)]);
+  return channels(colors[index]).map((c,i)=>c+(next[i]-c)*blend);
+}
+function block(x,y,w,h,fill,opacity=1) {
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" opacity="${opacity}"/>`;
+}
+function shape(fill, points) { return `<polygon fill="${fill}" points="${points}"/>`; }
+function renderScene(ms) {
+  const season=Number(seasonPicker.value);
+  const animate=!reducedMotion.matches;
+  const phase=sceneLighting(ms,animate);
+  const tint=palette(light,phase);
+  const lit=rgb=>css(channels(rgb).map((c,i)=>c*tint[i]/255));
+  const from=css(palette(sky,phase)), to=css(palette(horizon,phase));
+  let view=`<defs><linearGradient id="sceneSky" x2="0%" y2="100%">
+    <stop stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient></defs>`;
+  view+=block(634,87,481,493,'#243b56')+'<g clip-path="url(#viewClip)">';
+  view+=block(647,100,455,467,'url(#sceneSky)');
+  const sun=Math.min(2,phase);
+  if(phase<3) view+=block(716+160*sun,170-45*Math.sin(Math.PI*sun/2),42,42,'#ffe493',Math.min(1,3-phase));
+  if(phase>2) {
+    for(const [x,y,w] of [[966,143,34],[701,147,5],[815,194,4],[915,145,5],[1057,183,4]])
+      view+=block(x,y,w,w,'#e3efff',phase-2);
+  }
+  for(const [x,y,w,h] of [[678,225,94,13],[699,211,53,14],[846,199,73,10],[1025,215,52,11]])
+    view+=block(x,y,w,h,'#def8f0',(175-39*phase)/255);
+  view+=shape(lit(0x5f93aa),'647,368 647,320 728,254 796,318 862,247 956,333 1023,264 1102,322 1102,420');
+  const peak=lit(season===3?0xf0f7ff:0x8fbdc0);
+  for(const points of ['695,283 728,254 760,285 728,275','829,285 862,247 900,281 863,271','1000,288 1023,264 1052,285 1027,276'])
+    view+=shape(peak,points);
+  view+=shape(lit(meadow[season]),'647,353 733,333 808,370 879,344 984,367 1102,327 1102,515 647,515');
+  view+=shape(lit(near[season]),'647,414 741,376 853,418 960,377 1102,414 1102,567 647,567');
+  view+=shape(lit(path[season]),'894,392 954,397 881,449 976,567 814,567 790,474');
+  for(const [x,y] of [[719,417],[1018,401],[1073,445]]) {
+    const wood=lit(0x885a42);
+    view+=block(x-4,y-31,8,31,wood);
+    if(season===3) {
+      for(const [dx,dy,w,h] of [[-19,-41,38,5],[-19,-51,5,13],[14,-52,5,13],[-4,-60,8,33]])
+        view+=block(x+dx,y+dy,w,h,wood);
+      view+=block(x-23,y-54,14,5,peak)+block(x-8,y-63,16,5,peak);
+    } else {
+      const crown=lit(leaves[season]);
+      view+=block(x-23,y-54,46,24,crown)+block(x-15,y-65,30,13,crown);
+      if(season===0) view+=block(x-16,y-51,6,6,lit(0xf6a4cd))+block(x+10,y-44,6,6,lit(0xf6a4cd));
+    }
+  }
+  const detail=lit([0xf6a4cd,0xffe380,0xf8a449,0xedf8ff][season]);
+  for(let i=0;i<10;i++) {
+    const x=674+i*97%412, y=430+i*19%76;
+    if(season<=1) view+=block(x+2,y+4,2,7,lit(0x416f53))+block(x,y,6,6,detail);
+    else view+=block(x,y,season===3?12:7,4,detail);
+  }
+  view+=block(866,100,10,467,'#243b56')+block(647,325,455,10,'#243b56');
+  const gait=animate?walking(ms):{position:.5,direction:1,stride:0};
+  const x=723+303*gait.position, stride=gait.stride;
+  view+=block(x-57,541,114,9,'#101c2c',.41);
+  view+=`<g transform="translate(${x} ${542-Math.abs(stride)*3}) scale(${gait.direction} 1)">`;
+  const leg=(offset,lift,color)=>block(offset-10,-47+lift,23,39,lit(color))+block(offset-10,-13+lift,29,13,'#14263d');
+  const arm=(offset,color)=>block(offset-8,-94,19,40,lit(color))+block(offset-8,-62,19,15,lit(0xe7a85f));
+  view+=leg(-16-stride*22,-9*Math.max(0,-stride),0x233f69);
+  view+=leg(10+stride*22,-9*Math.max(0,stride),0x345787);
+  view+=arm(-45+stride*13,0x8ac24a);
+  for(const [a,b,w,h,color] of [[-34,-101,74,60,0x74a83f],[-34,-101,65,52,0xb9f46f]])
+    view+=block(a,b,w,h,lit(color));
+  view+=arm(39-stride*13,0x9cd84f);
+  for(const [a,b,w,h,color] of [[-24,-157,57,56,0xd98c4a],[-15,-157,48,51,0xffc879],[-29,-161,65,15,0x263657],
+      [-29,-149,18,16,0x263657],[5,-135,5,7,0x263657],[24,-135,5,7,0x263657],[16,-120,11,4,0x654139],
+      [-7,-83,24,5,0x305743],[2,-93,5,25,0x305743]])
+    view+=block(a,b,w,h,lit(color));
+  scene.innerHTML=view+'</g></g>'+block(632,554,487,26,'#345372');
+}
+seasonPicker.onchange=()=>renderScene(elapsed);
+reducedMotion.addEventListener('change',()=>renderScene(elapsed));
 function draw(seconds, total) {
   const clock=String(Math.floor(seconds/60)).padStart(2,'0')+String(seconds%60).padStart(2,'0');
   digits.forEach((digit,i)=>{
@@ -104,15 +174,21 @@ play.onclick=()=>{
   let last=20;
   const deadline=performance.now()+20000;
   play.textContent='Начать заново';
+  elapsed=0;
   draw(last,20);
+  renderScene(elapsed);
   timer=setInterval(()=>{
-    const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));
+    const remaining=Math.max(0,deadline-performance.now());
+    elapsed=20000-remaining;
+    const seconds=Math.ceil(remaining/1000);
+    if(!reducedMotion.matches || seconds!==last) renderScene(elapsed);
     if(seconds===last) return;
     last=seconds;
     draw(seconds,20);
     if(seconds>0) tick();
     else { clearInterval(timer); play.textContent='Запустить пример на 20 секунд'; }
-  },100);
+  },50);
 };
 draw(1200,1200);
+renderScene(0);
 </script></html>

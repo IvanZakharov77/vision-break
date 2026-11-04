@@ -56,9 +56,11 @@ jobs:
           Start-Sleep -Milliseconds 750
           if ($normal.HasExited) { throw 'Background process did not stay running' }
           Set-Content $settings 'custom.exe'
+          Set-Content (Join-Path $app 'season.txt') '2'
           Install-App
           if (!$normal.WaitForExit(5000)) { throw 'Upgrade did not stop the previous process' }
           if ((Get-Content $settings -Raw).Trim() -ne 'custom.exe') { throw 'Upgrade replaced settings' }
+          if ((Get-Content (Join-Path $app 'season.txt') -Raw).Trim() -ne '2') { throw 'Upgrade replaced the next season' }
           $uninstaller = (Get-ChildItem $app -Filter 'unins*.exe' | Select-Object -First 1).FullName
           $result = Start-Process $uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
           if ($result.ExitCode -ne 0 -or (Test-Path $exe) -or (Test-Path $startup) -or !(Test-Path $settings)) {
@@ -70,7 +72,7 @@ jobs:
         run: |
           $file = Get-Item "dist\VisionBreak-Setup-$env:VISIONBREAK_VERSION.exe"
           $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
-          Set-Content "$($file.FullName).sha256" "$hash *$($file.Name)" -Encoding ascii
+          [IO.File]::WriteAllText("$($file.FullName).sha256", "$hash *$($file.Name)`n", [Text.Encoding]::ASCII)
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
