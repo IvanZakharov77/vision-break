@@ -26,5 +26,7 @@ internal static class CycleTests
         Console.WriteLine("12 cycle checks passed.");
         ReleaseTests.Run();
         SceneTests.Run();
+        PersistenceTests.Run();
+        UpdateTests.Run();
     }
 }

@@ -67,6 +67,9 @@ jobs:
             throw 'Uninstall did not remove the application and autostart while retaining settings'
           }
           "Windows install, 20-second demo, upgrade, and uninstall passed."
+      - name: Smoke-test automatic update and retained deadline
+        shell: pwsh
+        run: .\tests\AutoUpdateSmoke.ps1
       - name: Write SHA-256
         shell: pwsh
         run: |

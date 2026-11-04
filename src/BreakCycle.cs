@@ -18,9 +18,14 @@ internal sealed class BreakCycle
         return true;
     }
 
+    public long RemainingMilliseconds(long now)
+    {
+        return System.Math.Max(0, deadline - now);
+    }
+
     public int RemainingSeconds(long now)
     {
-        long remaining = deadline - now;
+        long remaining = RemainingMilliseconds(now);
         return remaining > 0 ? (int)((remaining + 999) / 1000) : 0;
     }
 }

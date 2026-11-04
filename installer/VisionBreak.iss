@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "1.1.0"
+  #define AppVersion "1.2.0"
 #endif
 
 [Setup]
@@ -34,26 +34,37 @@ Name: "{userstartup}\VisionBreak"; Filename: "{app}\VisionBreak.exe"; WorkingDir
 Filename: "{app}\VisionBreak.exe"; Flags: nowait skipifsilent
 
 [Code]
-function StopVisionBreak: Boolean;
+function StopVisionBreak(IsUpdate: Boolean): Boolean;
 var
-  ProgramPath: String;
+  ProgramPath, StopArgument: String;
   ResultCode: Integer;
 begin
   ProgramPath := ExpandConstant('{app}\VisionBreak.exe');
   Result := True;
+  StopArgument := '--stop';
+  if IsUpdate then StopArgument := '--stop-for-update';
   if FileExists(ProgramPath) then
-    Result := Exec(ProgramPath, '--stop', ExpandConstant('{app}'),
+    Result := Exec(ProgramPath, StopArgument, ExpandConstant('{app}'),
                    SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+end;
+
+function IsAutomaticUpdate: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/VBUPDATE') = 0 then Result := True;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
-  if not StopVisionBreak then
+  if not StopVisionBreak(IsAutomaticUpdate) then
     Result := 'Could not stop the running VisionBreak process. Try again after signing out.';
 end;
 
 function InitializeUninstall: Boolean;
 begin
-  Result := StopVisionBreak;
+  Result := StopVisionBreak(False);
 end;
