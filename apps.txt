@@ -1,0 +1,9 @@
+# One Windows process name per line. Lines beginning with # are ignored.
+RobloxPlayerBeta.exe
+Windows10Universal.exe
+chrome.exe
+msedge.exe
+firefox.exe
+opera.exe
+brave.exe
+vivaldi.exe

@@ -1,0 +1,98 @@
+name: Windows build and release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run tests
+        shell: pwsh
+        run: |
+          .\Build.cmd --test
+          if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+          .\Build.cmd
+          if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
+          $version = [regex]::Match((Get-Content src/ReleaseCheck.cs -Raw), 'CurrentVersion = "(\d+\.\d+\.\d+)"').Groups[1].Value
+          if (!$version) { throw 'Missing application version' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") { throw 'The tag and application versions differ' }
+          "VISIONBREAK_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          & $iscc "/DAppVersion=$env:VISIONBREAK_VERSION" installer\VisionBreak.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+      - name: Smoke-test install, timer, upgrade and uninstall
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path "dist\VisionBreak-Setup-$env:VISIONBREAK_VERSION.exe").Path
+          $app = Join-Path $env:LOCALAPPDATA 'VisionBreak'
+          $exe = Join-Path $app 'VisionBreak.exe'
+          $settings = Join-Path $app 'apps.txt'
+          $startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'VisionBreak.lnk'
+          function Install-App {
+            $result = Start-Process $setup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
+            if ($result.ExitCode -ne 0) { throw "Setup failed ($($result.ExitCode))" }
+          }
+          Install-App
+          if (!(Test-Path $exe) -or !(Test-Path $settings) -or !(Test-Path $startup)) { throw 'Installation files missing' }
+          $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($startup)
+          if ($shortcut.TargetPath -ne $exe) { throw 'Incorrect startup target' }
+          $clock = [Diagnostics.Stopwatch]::StartNew()
+          $demo = Start-Process $exe -ArgumentList '--demo' -PassThru
+          if (!$demo.WaitForExit(40000)) { $demo.Kill(); throw 'Demo did not exit' }
+          if ($demo.ExitCode -ne 0 -or $clock.Elapsed.TotalSeconds -lt 18) { throw 'Demo exited early or failed' }
+          $normal = Start-Process $exe -PassThru
+          Start-Sleep -Milliseconds 750
+          if ($normal.HasExited) { throw 'Background process did not stay running' }
+          Set-Content $settings 'custom.exe'
+          Install-App
+          if (!$normal.WaitForExit(5000)) { throw 'Upgrade did not stop the previous process' }
+          if ((Get-Content $settings -Raw).Trim() -ne 'custom.exe') { throw 'Upgrade replaced settings' }
+          $uninstaller = (Get-ChildItem $app -Filter 'unins*.exe' | Select-Object -First 1).FullName
+          $result = Start-Process $uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
+          if ($result.ExitCode -ne 0 -or (Test-Path $exe) -or (Test-Path $startup) -or !(Test-Path $settings)) {
+            throw 'Uninstall did not remove the application and autostart while retaining settings'
+          }
+          "Windows install, 20-second demo, upgrade, and uninstall passed."
+      - name: Write SHA-256
+        shell: pwsh
+        run: |
+          $file = Get-Item "dist\VisionBreak-Setup-$env:VISIONBREAK_VERSION.exe"
+          $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+          Set-Content "$($file.FullName).sha256" "$hash *$($file.Name)" -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/*.exe
+            dist/*.sha256
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
+      - name: Verify and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          (cd dist && sha256sum -c ./*.sha256)
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "VisionBreak $GITHUB_REF_NAME" --generate-notes
