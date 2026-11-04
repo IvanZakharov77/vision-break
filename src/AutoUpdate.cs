@@ -132,7 +132,7 @@ internal static class AutoUpdate
                     attempted = true;
                     installer.WaitForExit();
                     success = installer.ExitCode == 0 &&
-                        AssemblyName.GetAssemblyName(InstalledExe).Version.ToString(3) == version;
+                        InstalledVersion() == version;
                 }
             }
         }
@@ -143,14 +143,20 @@ internal static class AutoUpdate
             {
                 try
                 {
-                    if (!success && (!File.Exists(InstalledExe) ||
-                        AssemblyName.GetAssemblyName(InstalledExe).Version.ToString(3) != ReleaseCheck.CurrentVersion))
+                    if (!success && InstalledVersion() != ReleaseCheck.CurrentVersion)
                         File.Copy(RunningExe, InstalledExe, true);
                     Start(InstalledExe, "").Dispose();
                 }
                 catch (Exception e) { if (!Handled(e)) throw; Debug.WriteLine(e); }
             }
         }
+    }
+
+    private static string InstalledVersion()
+    {
+        try { return AssemblyName.GetAssemblyName(InstalledExe).Version.ToString(3); }
+        catch (IOException) { return null; }
+        catch (BadImageFormatException) { return null; }
     }
 
     private static bool Handled(Exception e)

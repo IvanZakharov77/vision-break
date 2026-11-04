@@ -33,6 +33,12 @@ try {
         try { $before = [IO.File]::ReadAllText($state) } catch [IO.IOException] { $before = '' }
     } until ($before.StartsWith('1|use|'))
     $deadline = $before.Split('|')[2]
+    $badHash = '0' * 64
+    $invalid = Start-Process (Join-Path $staged 'previous.exe') -ArgumentList "--apply-update $future $badHash" -PassThru
+    if (!$invalid.WaitForExit(10000) -or $normal.HasExited -or
+        [Reflection.AssemblyName]::GetAssemblyName($exe).Version.ToString(3) -ne $env:VISIONBREAK_VERSION) {
+        throw 'Unverified package changed the installation'
+    }
     $helper = Start-Process (Join-Path $staged 'previous.exe') -ArgumentList "--apply-update $future $hash" -PassThru
     if (!$helper.WaitForExit(35000) -or !$normal.WaitForExit(5000)) { throw 'Automatic update did not finish' }
     $actual = [Reflection.AssemblyName]::GetAssemblyName($exe).Version.ToString(3)
