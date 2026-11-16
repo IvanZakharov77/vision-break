@@ -35,6 +35,12 @@ internal sealed class PersistentCycle
         return Math.Max(0, deadline - (OnBreak ? elapsed : utc));
     }
 
+    public void RestartUseAt(long utc)
+    {
+        OnBreak = false;
+        deadline = utc + UseLength;
+    }
+
     public bool Advance(long utc, long elapsed)
     {
         if (Remaining(utc, elapsed) > 0) return false;

@@ -15,6 +15,13 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+      - name: Choose a timezone outside quiet hours for UI smoke tests
+        shell: pwsh
+        run: |
+          $utc = [DateTime]::UtcNow
+          $zone = if ($utc.DayOfWeek -in @('Monday', 'Friday') -and $utc.Hour -ge 19 -and $utc.Hour -lt 21) { 'Tokyo Standard Time' } else { 'UTC' }
+          tzutil /s $zone
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot set smoke test timezone' }
       - name: Compile and run tests
         shell: pwsh
         run: |
@@ -67,6 +74,9 @@ jobs:
             throw 'Uninstall did not remove the application and autostart while retaining settings'
           }
           "Windows install, 20-second demo, upgrade, and uninstall passed."
+      - name: Smoke-test global emergency shortcut
+        shell: pwsh
+        run: .\tests\EmergencySmoke.ps1
       - name: Smoke-test automatic update and retained deadline
         shell: pwsh
         run: .\tests\AutoUpdateSmoke.ps1

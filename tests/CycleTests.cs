@@ -28,5 +28,6 @@ internal static class CycleTests
         SceneTests.Run();
         PersistenceTests.Run();
         UpdateTests.Run();
+        ScheduleTests.Run();
     }
 }

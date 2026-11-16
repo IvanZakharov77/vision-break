@@ -90,6 +90,7 @@ internal sealed class BreakSession : ApplicationContext
     private CycleSnapshot suspended;
     private long nextCheckpoint;
     private long lastBreakEnd = -1;
+    private long quietEnd;
 
     public BreakSession(bool demo, EventWaitHandle stop, EventWaitHandle updateStop)
     {
@@ -106,14 +107,15 @@ internal sealed class BreakSession : ApplicationContext
             store = new CycleStore(AutoUpdate.Profile);
             long utc = UtcMilliseconds;
             cycle = new PersistentCycle(store.Load(), utc, elapsed);
-            if (cycle.Advance(utc, elapsed))
+            if (EnterQuietHours(utc, elapsed)) { }
+            else if (cycle.Advance(utc, elapsed))
                 BeginBreak(utc, elapsed);
             else
             {
                 Checkpoint(utc, elapsed);
                 if (cycle.OnBreak) ShowCurrentBreak(utc, elapsed);
             }
-            sessionWindow = new SessionWindow(SaveBeforeShutdown, Suspend, Resume);
+            sessionWindow = new SessionWindow(SaveBeforeShutdown, Suspend, Resume, EmergencyExit);
             if (AutoUpdate.IsInstalled)
                 updateCheck = Task.Run(() => AutoUpdate.StageAsync());
         }
@@ -141,7 +143,13 @@ internal sealed class BreakSession : ApplicationContext
             ExitThread();
             return;
         }
+        if (sessionWindow.EmergencyKeysDown())
+        {
+            EmergencyExit();
+            return;
+        }
         if (suspended != null) return;
+        if (EnterQuietHours(utc, elapsed)) return;
         if (updateStop.WaitOne(0) && !cycle.OnBreak && lastBreakEnd >= 0 &&
             elapsed - lastBreakEnd < 120000 && cycle.Remaining(utc, elapsed) > 2220000 &&
             Checkpoint(utc, elapsed))
@@ -170,6 +178,37 @@ internal sealed class BreakSession : ApplicationContext
             if (elapsed >= nextCheckpoint || cycle.Sound != screen.SoundEnabled)
                 Checkpoint(utc, elapsed);
         }
+    }
+
+    private bool EnterQuietHours(long utc, long elapsed)
+    {
+        DateTime local = DateTime.Now;
+        if (!QuietHours.IsActive(local))
+        {
+            quietEnd = 0;
+            return false;
+        }
+
+        long end = QuietHours.EndUtcMilliseconds(local);
+        if (quietEnd != end)
+        {
+            if (screen != null)
+            {
+                cycle.Sound = screen.SoundEnabled;
+                CloseScreen();
+            }
+            cycle.RestartUseAt(end);
+            quietEnd = end;
+            Checkpoint(utc, elapsed);
+        }
+        return true;
+    }
+
+    private void EmergencyExit()
+    {
+        SaveBeforeShutdown();
+        if (screen != null) CloseScreen();
+        ExitThread();
     }
 
     private void BeginBreak(long utc, long elapsed)
@@ -246,7 +285,7 @@ internal sealed class BreakSession : ApplicationContext
         if (disposing)
         {
             timer.Dispose();
-            if (sessionWindow != null) sessionWindow.DestroyHandle();
+            if (sessionWindow != null) sessionWindow.Release();
             if (screen != null) screen.Dispose();
         }
         base.Dispose(disposing);
@@ -258,17 +297,48 @@ internal sealed class SessionWindow : NativeWindow
     private readonly Action save;
     private readonly Action suspend;
     private readonly Action resume;
+    private readonly Action emergencyExit;
+    private const int EmergencyId = 1;
+    private const uint Modifiers = 0x0001 | 0x0002 | 0x0004 | 0x4000;
 
-    public SessionWindow(Action save, Action suspend, Action resume)
+    [DllImport("user32.dll")]
+    private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr window, int id);
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
+
+    public bool EmergencyKeysDown()
+    {
+        return GetAsyncKeyState(0x11) < 0 && GetAsyncKeyState(0x12) < 0 &&
+            GetAsyncKeyState(0x10) < 0 && GetAsyncKeyState(0x7B) < 0;
+    }
+
+    public void Release()
+    {
+        UnregisterHotKey(Handle, EmergencyId);
+        DestroyHandle();
+    }
+
+
+    public SessionWindow(Action save, Action suspend, Action resume, Action emergencyExit)
     {
         this.save = save;
         this.suspend = suspend;
         this.resume = resume;
-        CreateHandle(new CreateParams());
+        this.emergencyExit = emergencyExit;
+        CreateHandle(new CreateParams { Caption = "VisionBreak.Session" });
+        RegisterHotKey(Handle, EmergencyId, Modifiers, 0x7B);
+
     }
 
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == 0x0312 && m.WParam.ToInt32() == EmergencyId)
+        {
+            emergencyExit();
+            return;
+        }
         const int QueryEndSession = 0x0011;
         const int EndSession = 0x0016;
         const int PowerBroadcast = 0x0218;
