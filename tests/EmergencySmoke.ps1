@@ -19,7 +19,7 @@ try {
     $watch = [Diagnostics.Stopwatch]::StartNew()
     do {
         Start-Sleep -Milliseconds 100
-        if ($process.HasExited -or $watch.Elapsed.TotalSeconds -gt 10) { throw 'Break screen did not open' }
+        if ($process.HasExited -or $watch.Elapsed.TotalSeconds -gt 10) { throw ("Break screen did not open. Local={0}, Zone={1}, Exited={2}, State={3}, Title={4}" -f [DateTime]::Now, [TimeZoneInfo]::Local.Id, $process.HasExited, [IO.File]::ReadAllText($state), $process.MainWindowTitle) }
         $screen = [EmergencyInput]::FindWindow($null, 'Программа для тренировки зрения')
     } until ($screen -ne [IntPtr]::Zero)
     Start-Sleep -Milliseconds 250

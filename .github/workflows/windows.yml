@@ -19,7 +19,8 @@ jobs:
         shell: pwsh
         run: |
           $utc = [DateTime]::UtcNow
-          $zone = if ($utc.DayOfWeek -in @('Monday', 'Friday') -and $utc.Hour -ge 19 -and $utc.Hour -lt 21) { 'Tokyo Standard Time' } else { 'UTC' }
+          $zone = if ($utc.DayOfWeek.ToString() -in @('Monday', 'Friday') -and $utc.Hour -ge 19 -and $utc.Hour -lt 21) { 'Tokyo Standard Time' } else { 'UTC' }
+          Write-Output "UI smoke timezone $zone"
           tzutil /s $zone
           if ($LASTEXITCODE -ne 0) { throw 'Cannot set smoke test timezone' }
       - name: Compile and run tests
